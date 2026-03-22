@@ -1,7 +1,16 @@
 from flask import Blueprint, jsonify
 import psutil
+import time
 
 proc_bp = Blueprint('processes', __name__)
+
+# Critical system processes that must NOT be killed
+PROTECTED_PIDS   = {0, 4}
+PROTECTED_NAMES  = {
+    'system idle process', 'system', 'csrss.exe',
+    'smss.exe', 'wininit.exe', 'winlogon.exe',
+    'services.exe', 'lsass.exe', 'svchost.exe'
+}
 
 @proc_bp.route('/processes', methods=['GET'])
 def get_processes():
@@ -12,14 +21,55 @@ def get_processes():
 
 @proc_bp.route('/kill_process/<int:pid>', methods=['POST'])
 def kill_process(pid):
+    # ── Safety guard ──────────────────────────────────────────
+    if pid in PROTECTED_PIDS:
+        return jsonify({
+            'status': 'error',
+            'message': f'PID {pid} is a critical OS process and cannot be terminated.'
+        }), 403
+
     try:
-        p = psutil.Process(pid)
-        p.terminate()
-        p.wait(timeout=3)
-        return jsonify({'success': True, 'message': f'Process {pid} terminated'})
+        proc = psutil.Process(pid)
+        name = proc.name()
+
+        if name.lower() in PROTECTED_NAMES:
+            return jsonify({
+                'status': 'error',
+                'message': f'"{name}" is a critical system process and cannot be terminated.'
+            }), 403
+
+        # ── Terminate ─────────────────────────────────────────
+        proc.terminate()
+        try:
+            proc.wait(timeout=3)
+        except psutil.TimeoutExpired:
+            proc.kill()             # force-kill if SIGTERM not enough
+
+        time.sleep(0.3)             # brief pause so process list updates
+
+        # ── Emit updated list via Socket.IO ───────────────────
+        from app import socketio, monitor, current_stats as cs
+        updated = monitor.get_stats()
+
+        # Update the global current_stats too
+        import app as _app
+        _app.current_stats = updated
+
+        socketio.emit('process_update', updated['processes'])
+
+        return jsonify({
+            'status': 'success',
+            'message': f'Process "{name}" (PID {pid}) terminated successfully.'
+        })
+
     except psutil.NoSuchProcess:
-        return jsonify({'success': False, 'message': 'Process not found'}), 404
+        return jsonify({'status': 'error', 'message': f'PID {pid} not found.'}), 404
+
     except psutil.AccessDenied:
-        return jsonify({'success': False, 'message': 'Access denied'}), 403
+        return jsonify({
+            'status': 'error',
+            'message': f'Access denied — cannot terminate PID {pid}. Try running as Administrator.'
+        }), 403
+
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'status': 'error', 'message': str(e)}), 500

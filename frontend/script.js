@@ -33,15 +33,50 @@ function switchTab(target) {
 }
 window.switchTab = switchTab;
 
+// ——— Protected process guard (client-side fast-fail) ———
+const PROTECTED_PIDS  = new Set([0, 4]);
+const PROTECTED_NAMES = new Set([
+    'system idle process', 'system', 'csrss.exe',
+    'smss.exe', 'wininit.exe', 'winlogon.exe',
+    'services.exe', 'lsass.exe'
+]);
+
 // ——— Kill Process ———
-window.killProcess = async function(pid) {
-    if (!confirm(`Are you sure you want to terminate process ${pid}?\nThis cannot be undone.`)) return;
+window.killProcess = async function(pid, nameRaw) {
+    const name = (nameRaw || '').toLowerCase();
+
+    // Block critical processes immediately
+    if (PROTECTED_PIDS.has(pid) || PROTECTED_NAMES.has(name)) {
+        showToast(`🛡️ "${nameRaw || pid}" is a protected OS process and cannot be terminated.`, 'error');
+        return;
+    }
+
+    if (!confirm(`Terminate "${nameRaw}" (PID ${pid})?\n\nThis action is irreversible.`)) return;
+
+    // Instant visual removal with fade animation
+    const row = document.querySelector(`tr[data-pid="${pid}"]`);
+    if (row) {
+        row.style.transition = 'opacity 0.3s, transform 0.3s';
+        row.style.opacity    = '0';
+        row.style.transform  = 'translateX(20px)';
+        setTimeout(() => row.remove(), 320);
+    }
+
     try {
         const res  = await fetch(`${API}/api/kill_process/${pid}`, { method: 'POST' });
         const data = await res.json();
-        showToast(data.success ? `✅ Process ${pid} terminated.` : `❌ ${data.message}`, data.success ? 'success' : 'error');
+        const ok   = data.status === 'success';
+        showToast(ok ? `✅ ${data.message}` : `❌ ${data.message}`, ok ? 'success' : 'error');
+
+        // If kill failed, restore row (re-render will happen on next socket tick)
+        if (!ok && row) {
+            row.style.opacity   = '1';
+            row.style.transform = 'none';
+        }
     } catch {
-        showToast('❌ Connection error', 'error');
+        showToast('❌ Unable to reach backend. Check server connection.', 'error');
+        // restore row on network failure
+        if (row) { row.style.opacity = '1'; row.style.transform = 'none'; }
     }
 };
 
@@ -120,8 +155,9 @@ function renderFilteredProcesses() {
     );
     const full = document.getElementById('fullProcessList');
     if (!full) return;
+    const isProtected = p => PROTECTED_PIDS.has(p.pid) || PROTECTED_NAMES.has((p.name || '').toLowerCase());
     full.innerHTML = filtered.map(p => `
-        <tr>
+        <tr data-pid="${p.pid}">
             <td><span class="mono">${p.pid}</span></td>
             <td><strong>${p.name}</strong></td>
             <td>
@@ -133,9 +169,10 @@ function renderFilteredProcesses() {
             <td>${(p.memory_percent || 0).toFixed(1)}%</td>
             <td><span class="status-badge status-${(p.status || 'unknown').toLowerCase()}">${p.status || '—'}</span></td>
             <td>
-                <button class="btn-danger" onclick="killProcess(${p.pid})" title="Terminate process ${p.pid}">
-                    ⊘ Kill
-                </button>
+                ${isProtected(p)
+                    ? `<span class="proc-protected-badge">🛡 Protected</span>`
+                    : `<button class="btn-danger" onclick="killProcess(${p.pid}, '${(p.name||'').replace(/'/g, "\\'")}')">⊘ Kill</button>`
+                }
             </td>
         </tr>
     `).join('') || '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-secondary)">No matching processes found.</td></tr>';
@@ -312,8 +349,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (si) { si.innerHTML = '🔴 Disconnected'; si.style.color = 'var(--danger-color)'; }
         });
 
+        // Full system update every 2s
         socket.on('system_data', ({ stats, warnings }) => {
             updateDashboard(stats, warnings);
+        });
+
+        // ——— process_update: fired immediately after a kill ———
+        // Re-renders the process table with the fresh list from backend
+        socket.on('process_update', (processes) => {
+            renderProcesses(processes);
+            // Update the process count KPI
+            const lu = document.getElementById('lastUpdated');
+            if (lu) lu.innerText = new Date().toLocaleTimeString();
         });
     }
 });
