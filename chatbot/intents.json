@@ -1,0 +1,44 @@
+{
+  "intents": [
+    {
+      "tag": "greeting",
+      "patterns": ["Hi", "Hello", "How are you", "Is anyone there?", "Good day", "Greetings"],
+      "responses": ["Hello! System monitor initialized.", "Hi there! I can help you check system stats.", "Greetings! What system metric do you need?"]
+    },
+    {
+      "tag": "cpu_usage",
+      "patterns": ["cpu usage", "what is the cpu usage", "check cpu", "how much cpu", "cpu stats", "cpu"],
+      "responses": ["CPU usage is currently at {cpu}%."]
+    },
+    {
+      "tag": "memory_usage",
+      "patterns": ["memory usage", "what is the memory", "check memory", "how much ram", "ram usage", "memory stats", "memory"],
+      "responses": ["Memory usage is currently at {memory}%."]
+    },
+    {
+      "tag": "disk_usage",
+      "patterns": ["disk usage", "what is the disk usage", "check disk", "how much storage", "disk stats", "disk"],
+      "responses": ["Disk usage is currently at {disk}%."]
+    },
+    {
+      "tag": "top_process",
+      "patterns": ["top process", "highest cpu process", "what is eating my cpu", "show top process", "which process is heavy"],
+      "responses": ["The top process running is {top_process}."]
+    },
+    {
+      "tag": "warnings",
+      "patterns": ["any warnings", "system health", "are there any issues", "warnings", "system status"],
+      "responses": ["There are currently {warning_count} active warnings."]
+    },
+    {
+      "tag": "goodbye",
+      "patterns": ["Bye", "See you later", "Goodbye", "Exit", "Quit"],
+      "responses": ["Goodbye! Keep monitoring.", "See you!"]
+    },
+    {
+      "tag": "fallback",
+      "patterns": [""],
+      "responses": ["I'm sorry, I don't understand that. You can ask me about CPU, memory, disk, or top processes."]
+    }
+  ]
+}
