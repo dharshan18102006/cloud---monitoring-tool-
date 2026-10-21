@@ -17,8 +17,9 @@ from chatbot.engine import ChatbotEngine
 
 # ---------------------------------------------------------------------------
 # App Factory & Unified Frontend Serving
-# ---------------------------------------------------------------------------
-frontend_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend'))
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+public_dir = os.path.join(base_dir, 'public')
+frontend_dir = public_dir if os.path.exists(public_dir) else os.path.join(base_dir, 'frontend')
 app = Flask(__name__, static_folder=frontend_dir, static_url_path='')
 app.config['SECRET_KEY'] = 'system-monitor-secret-2024'
 CORS(app, supports_credentials=True, origins="*")
@@ -26,7 +27,11 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 @app.route('/')
 def serve_index():
-    return send_from_directory(frontend_dir, 'login.html')
+    if os.path.exists(os.path.join(frontend_dir, 'index.html')):
+        return send_from_directory(frontend_dir, 'index.html')
+    if os.path.exists(os.path.join(frontend_dir, 'login.html')):
+        return send_from_directory(frontend_dir, 'login.html')
+    return "<h1>System Monitoring Tool</h1><p><a href='/login.html'>Go to Login</a></p>"
 
 # ---------------------------------------------------------------------------
 # Prometheus: use try/except to avoid duplicate-registration on reload

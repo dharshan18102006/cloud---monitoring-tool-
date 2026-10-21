@@ -23,7 +23,7 @@ def get_processes():
 def get_stats():
     import app
     stats = app.current_stats
-    if not stats:
+    if not stats or os.environ.get('VERCEL'):
         stats = app.monitor.get_stats()
         app.current_stats = stats
     warnings = app.monitor.get_warnings(stats)

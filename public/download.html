@@ -1,0 +1,133 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Monitoring Tool - Download Center</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0b0f19;
+            color: #f1f5f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .card {
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 650px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+        h1 { font-size: 1.6rem; margin-top: 0; color: #60a5fa; }
+        p { color: #94a3b8; font-size: 0.95rem; line-height: 1.5; }
+        .list { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+        .item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #1a2234;
+            padding: 14px 18px;
+            border-radius: 10px;
+            border: 1px solid #2d3748;
+            transition: 0.2s;
+        }
+        .item:hover { border-color: #3b82f6; background: #1e293b; }
+        .name { font-weight: 600; font-size: 0.95rem; }
+        .desc { font-size: 0.8rem; color: #94a3b8; margin-top: 3px; }
+        .btn {
+            background: #2563eb;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+        .btn:hover { background: #1d4ed8; }
+        .btn-all {
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            padding: 12px 20px;
+            font-size: 0.95rem;
+            display: block;
+            text-align: center;
+            border-radius: 8px;
+            margin-top: 20px;
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+        }
+        .btn-all:hover { opacity: 0.9; }
+        .note {
+            margin-top: 20px;
+            padding: 12px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 8px;
+            font-size: 0.82rem;
+            color: #93c5fd;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>📦 Project Submission Downloads</h1>
+        <p>Click any button below to download the factor ZIP files directly to your device:</p>
+        
+        <a class="btn-all" href="download/Cloud_Monitoring_Tool_All_Factors.zip" download>⚡ Download Complete All-In-One ZIP (All Factors)</a>
+
+        <div class="list">
+            <div class="item">
+                <div>
+                    <div class="name">Factor 1: GitHub Link</div>
+                    <div class="desc">Repository link & clone instructions</div>
+                </div>
+                <a class="btn" href="download/01_github_link.zip" download>Download</a>
+            </div>
+            <div class="item">
+                <div>
+                    <div class="name">Factor 2: UI Screenshots</div>
+                    <div class="desc">5 high-res screenshots of dashboard, process manager, chatbot & login</div>
+                </div>
+                <a class="btn" href="download/02_screenshots.zip" download>Download</a>
+            </div>
+            <div class="item">
+                <div>
+                    <div class="name">Factor 3: Backend Code</div>
+                    <div class="desc">Flask server, system metrics, monitoring APIs</div>
+                </div>
+                <a class="btn" href="download/03_backend_code.zip" download>Download</a>
+            </div>
+            <div class="item">
+                <div>
+                    <div class="name">Factor 4: Frontend Code</div>
+                    <div class="desc">Interactive dashboard UI, WebSockets, stylesheets</div>
+                </div>
+                <a class="btn" href="download/04_frontend_code.zip" download>Download</a>
+            </div>
+            <div class="item">
+                <div>
+                    <div class="name">Factor 5: Chatbot Model & Code</div>
+                    <div class="desc">NLP ML pipeline, trained model pkl, intent datasets</div>
+                </div>
+                <a class="btn" href="download/05_chatbot_code.zip" download>Download</a>
+            </div>
+        </div>
+
+        <div class="note">
+            📂 <b>Direct PC Location:</b> These files have also been copied directly to your Windows <b>Downloads</b> folder (<code>C:\Users\Dharshan\Downloads\Cloud_Monitoring_Tool_Zips</code>).
+        </div>
+    </div>
+</body>
+</html>

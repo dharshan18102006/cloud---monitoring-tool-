@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Monitoring Tool — Dashboard</title>
+    <meta name="description" content="Real-time System Monitoring Dashboard with AI Assistant, Process Manager & Alert System">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body class="dashboard-body">
+
+    <!-- Sidebar -->
+    <nav class="sidebar glass-panel">
+        <div class="sidebar-header">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="accent-color">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            <h2>System <span class="accent-color">Monitor</span></h2>
+        </div>
+
+        <ul class="nav-links">
+            <li class="active" data-tab="overview">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                Overview
+            </li>
+            <li data-tab="processes">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                Process Manager
+            </li>
+            <li data-tab="warnings">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                Alerts &amp; Warnings
+                <span id="warningBadge" class="badge">0</span>
+            </li>
+        </ul>
+
+        <!-- System Info Summary -->
+        <div class="sidebar-stats">
+            <div class="mini-stat">
+                <span class="mini-label">CPU</span>
+                <span class="mini-val" id="sidebarCpu">—</span>
+            </div>
+            <div class="mini-stat">
+                <span class="mini-label">Memory</span>
+                <span class="mini-val" id="sidebarMem">—</span>
+            </div>
+            <div class="mini-stat">
+                <span class="mini-label">Disk</span>
+                <span class="mini-val" id="sidebarDisk">—</span>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-app-info">System Monitoring Tool v1.0</div>
+            <button id="logoutBtn" class="btn-secondary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                Logout
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="topbar">
+            <div>
+                <h1 id="pageTitle">Dashboard Overview</h1>
+                <p class="page-subtitle" id="pageSubtitle">Real-time system telemetry and performance monitoring</p>
+            </div>
+            <div class="topbar-right">
+                <div class="update-time">Last updated: <span id="lastUpdated">—</span></div>
+                <div class="status-indicator" id="statusIndicator">
+                    <span class="pulse-dot"></span> Socket Connected
+                </div>
+            </div>
+        </header>
+
+        <!-- ====== OVERVIEW TAB ====== -->
+        <section id="overview" class="tab-section active">
+
+            <!-- Summary KPI cards -->
+            <div class="kpi-row">
+                <div class="kpi-card glass-panel">
+                    <div class="kpi-icon cpu-icon">⚙️</div>
+                    <div class="kpi-body">
+                        <div class="kpi-title">CPU Usage</div>
+                        <div class="kpi-value" id="cpuText">0%</div>
+                        <div class="kpi-sub" id="cpuCores">0 Cores</div>
+                    </div>
+                    <div class="kpi-bar-wrap">
+                        <div class="kpi-bar" id="cpuBar"></div>
+                    </div>
+                </div>
+
+                <div class="kpi-card glass-panel">
+                    <div class="kpi-icon mem-icon">🧠</div>
+                    <div class="kpi-body">
+                        <div class="kpi-title">Memory Usage</div>
+                        <div class="kpi-value" id="memText">0%</div>
+                        <div class="kpi-sub" id="memDesc">0 GB / 0 GB</div>
+                    </div>
+                    <div class="kpi-bar-wrap">
+                        <div class="kpi-bar" id="memBar"></div>
+                    </div>
+                </div>
+
+                <div class="kpi-card glass-panel">
+                    <div class="kpi-icon disk-icon">💾</div>
+                    <div class="kpi-body">
+                        <div class="kpi-title">Disk Usage</div>
+                        <div class="kpi-value" id="diskText">0%</div>
+                        <div class="kpi-sub" id="diskDesc">0 GB / 0 GB</div>
+                    </div>
+                    <div class="kpi-bar-wrap">
+                        <div class="kpi-bar" id="diskBar"></div>
+                    </div>
+                </div>
+
+                <div class="kpi-card glass-panel">
+                    <div class="kpi-icon proc-icon">📋</div>
+                    <div class="kpi-body">
+                        <div class="kpi-title">Active Processes</div>
+                        <div class="kpi-value" id="procCount">0</div>
+                        <div class="kpi-sub">Running tasks</div>
+                    </div>
+                    <div class="kpi-bar-wrap">
+                        <div class="kpi-bar" id="procBar" style="background:var(--success-color)"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Per-core CPU grid -->
+            <div class="section-row">
+                <div class="glass-panel panel-flex">
+                    <div class="panel-header">
+                        <h3>CPU Core Utilization</h3>
+                        <span class="panel-tag">Live</span>
+                    </div>
+                    <div id="coreGrid" class="core-grid"></div>
+                </div>
+
+                <div class="glass-panel panel-flex">
+                    <div class="panel-header">
+                        <h3>Resource Health</h3>
+                        <span class="panel-tag">Thresholds</span>
+                    </div>
+                    <div class="health-list">
+                        <div class="health-item">
+                            <div class="health-label"><span>CPU</span><span id="healthCpu">OK</span></div>
+                            <div class="progress-container"><div class="progress-bar" id="hCpuBar"></div></div>
+                            <div class="health-note">Threshold: 80%</div>
+                        </div>
+                        <div class="health-item">
+                            <div class="health-label"><span>Memory</span><span id="healthMem">OK</span></div>
+                            <div class="progress-container"><div class="progress-bar" id="hMemBar"></div></div>
+                            <div class="health-note">Threshold: 85%</div>
+                        </div>
+                        <div class="health-item">
+                            <div class="health-label"><span>Disk</span><span id="healthDisk">OK</span></div>
+                            <div class="progress-container"><div class="progress-bar" id="hDiskBar"></div></div>
+                            <div class="health-note">Threshold: 90%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Processes table (compact) -->
+            <div class="glass-panel">
+                <div class="panel-header">
+                    <h3>Top 5 Active Processes</h3>
+                    <button class="btn-link" onclick="switchTab('processes')">View all →</button>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>PID</th><th>Process Name</th><th>CPU %</th><th>Memory %</th><th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topProcessList"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ====== PROCESSES TAB ====== -->
+        <section id="processes" class="tab-section" style="display:none">
+            <div class="glass-panel proc-panel">
+                <div class="panel-header">
+                    <div>
+                        <h3>Process Manager</h3>
+                        <p class="panel-desc">All running processes on this machine, sorted by CPU usage. Click <em>Kill</em> to terminate any process.</p>
+                    </div>
+                    <div class="proc-toolbar">
+                        <input type="text" id="procSearch" placeholder="🔍  Search by name or PID..." class="search-input">
+                        <div class="proc-count-badge">Total: <span id="totalProcCount">0</span></div>
+                    </div>
+                </div>
+
+                <div class="table-scroll">
+                    <table class="data-table proc-table">
+                        <thead>
+                            <tr>
+                                <th>PID</th>
+                                <th>Process Name</th>
+                                <th>CPU %</th>
+                                <th>Memory %</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fullProcessList"></tbody>
+                    </table>
+                </div>
+
+                <div class="proc-footer">
+                    ⚠️ Killing a process is irreversible. Only terminate non-critical processes.
+                </div>
+            </div>
+        </section>
+
+        <!-- ====== WARNINGS TAB ====== -->
+        <section id="warnings" class="tab-section" style="display:none">
+
+            <!-- Warning summary cards -->
+            <div class="warn-summary-row">
+                <div class="warn-summary-card glass-panel warn-card-red">
+                    <div class="warn-sum-icon">🔴</div>
+                    <div class="warn-sum-body">
+                        <div class="warn-sum-value" id="warnCritCount">0</div>
+                        <div class="warn-sum-label">Critical Alerts</div>
+                    </div>
+                </div>
+                <div class="warn-summary-card glass-panel warn-card-yellow">
+                    <div class="warn-sum-icon">🟡</div>
+                    <div class="warn-sum-body">
+                        <div class="warn-sum-value" id="warnHighCount">0</div>
+                        <div class="warn-sum-label">High CPU Processes</div>
+                    </div>
+                </div>
+                <div class="warn-summary-card glass-panel warn-card-green">
+                    <div class="warn-sum-icon">🟢</div>
+                    <div class="warn-sum-body">
+                        <div class="warn-sum-value" id="warnOkCount">3</div>
+                        <div class="warn-sum-label">Metrics in Normal Range</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Threshold Rules -->
+            <div class="glass-panel rule-panel">
+                <div class="panel-header">
+                    <h3>Alert Threshold Configuration</h3>
+                    <span class="panel-tag">Active Rules</span>
+                </div>
+                <div class="rules-grid">
+                    <div class="rule-card">
+                        <div class="rule-icon">⚙️</div>
+                        <div class="rule-body">
+                            <div class="rule-name">CPU Warning</div>
+                            <div class="rule-val">Triggers at &gt; <strong>80%</strong> CPU usage</div>
+                        </div>
+                        <div class="rule-status" id="ruleCpu">OK</div>
+                    </div>
+                    <div class="rule-card">
+                        <div class="rule-icon">🧠</div>
+                        <div class="rule-body">
+                            <div class="rule-name">Memory Warning</div>
+                            <div class="rule-val">Triggers at &gt; <strong>85%</strong> RAM usage</div>
+                        </div>
+                        <div class="rule-status" id="ruleMem">OK</div>
+                    </div>
+                    <div class="rule-card">
+                        <div class="rule-icon">💾</div>
+                        <div class="rule-body">
+                            <div class="rule-name">Disk Warning</div>
+                            <div class="rule-val">Triggers at &gt; <strong>90%</strong> disk usage</div>
+                        </div>
+                        <div class="rule-status" id="ruleDisk">OK</div>
+                    </div>
+                    <div class="rule-card">
+                        <div class="rule-icon">📋</div>
+                        <div class="rule-body">
+                            <div class="rule-name">High-CPU Process</div>
+                            <div class="rule-val">Triggers when any process &gt; <strong>50%</strong> CPU</div>
+                        </div>
+                        <div class="rule-status" id="ruleProc">OK</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live alert feed -->
+            <div class="glass-panel warn-panel">
+                <div class="panel-header">
+                    <h3>Live Alert Feed</h3>
+                    <span class="panel-tag live-dot-tag"><span class="pulse-dot small"></span> Updating every 2s</span>
+                </div>
+                <div id="warningContainer" class="warning-list">
+                    <div class="empty-state">
+                        <div class="empty-icon">✅</div>
+                        <div class="empty-title">All Systems Operational</div>
+                        <div class="empty-desc">No active warnings. All metrics are within normal thresholds.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- AI Chatbot Floating Widget -->
+    <div class="chatbot-wrapper glass-panel">
+        <div class="chat-header" id="chatToggle">
+            <div class="chat-title">
+                <span class="bot-avatar">🤖</span>
+                <div>
+                    <div>AI Assistant</div>
+                    <div class="bot-status">Online · Powered by ML</div>
+                </div>
+            </div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="chevron"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+        <div class="chat-body" id="chatBody" style="display:none">
+            <div class="chat-messages" id="chatMessages">
+                <div class="msg bot">👋 Hi! I'm your AI System Monitor. Ask me things like:<br><br>• <em>"What's my CPU usage?"</em><br>• <em>"Check memory"</em><br>• <em>"Any warnings?"</em><br>• <em>"Show top process"</em></div>
+            </div>
+            <form class="chat-input" id="chatForm">
+                <input type="text" id="chatInput" placeholder="Ask about your system..." autocomplete="off">
+                <button type="submit" class="btn-send">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
