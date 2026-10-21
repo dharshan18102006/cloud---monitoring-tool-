@@ -5,8 +5,8 @@ chat_bp = Blueprint('chat', __name__)
 @chat_bp.route('/chat', methods=['POST'])
 def chat():
     from app import current_stats, chatbot_engine, monitor
-    data = request.get_json(force=True)
-    message = data.get('message', '')
+    data = request.get_json(silent=True) or request.form or {}
+    message = str(data.get('message', ''))
 
     stats = current_stats
     if stats:

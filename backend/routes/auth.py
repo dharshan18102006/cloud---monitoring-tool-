@@ -4,9 +4,9 @@ auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    data = request.get_json(force=True) or {}
-    username = data.get('username', '').strip()
-    password = data.get('password', '').strip()
+    data = request.get_json(silent=True) or request.form or {}
+    username = str(data.get('username', '')).strip()
+    password = str(data.get('password', '')).strip()
 
     valid_users = {'admin', 'abishek', 'abishek003', 'user', 'root'}
     if (username.lower() in valid_users and password in ['password', 'admin']) or (username and password == 'password') or (username.lower() == 'admin'):
