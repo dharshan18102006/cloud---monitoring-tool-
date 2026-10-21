@@ -19,6 +19,16 @@ def get_processes():
         return jsonify(current_stats.get('processes', []))
     return jsonify([])
 
+@proc_bp.route('/stats', methods=['GET'])
+def get_stats():
+    import app
+    stats = app.current_stats
+    if not stats:
+        stats = app.monitor.get_stats()
+        app.current_stats = stats
+    warnings = app.monitor.get_warnings(stats)
+    return jsonify({'stats': stats, 'warnings': warnings})
+
 @proc_bp.route('/kill_process/<int:pid>', methods=['POST'])
 def kill_process(pid):
     # ── Safety guard ──────────────────────────────────────────

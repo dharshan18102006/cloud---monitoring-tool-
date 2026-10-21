@@ -1,0 +1,12 @@
+**/.git
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+backend/venv
+.vscode
+.idea
+submission_factors
+submission_zips
+screenshots
+*.png

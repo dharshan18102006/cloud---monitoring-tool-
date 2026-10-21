@@ -2,7 +2,7 @@
 // System Monitoring Tool — Dashboard Script
 // =====================================
 
-const API = 'http://localhost:5000';
+const API = (window.location.protocol.startsWith('http') && window.location.port !== '8000') ? '' : 'http://localhost:5000';
 const TAB_CONFIG = {
     overview:  { title: 'Dashboard Overview',  subtitle: 'Real-time system telemetry and performance monitoring' },
     processes: { title: 'Process Manager',     subtitle: 'All running processes, sorted by CPU usage. Terminate tasks directly from here.' },
@@ -335,32 +335,83 @@ document.addEventListener('DOMContentLoaded', () => {
         msgs.scrollTop = msgs.scrollHeight;
     });
 
-    // Socket.IO connection
-    if (typeof io !== 'undefined') {
-        const socket = io(API, { transports: ['websocket', 'polling'] });
+    // Fetch immediate system stats on load
+    fetch(`${API}/api/stats`)
+        .then(r => r.json())
+        .then(data => {
+            if (data && data.stats) updateDashboard(data.stats, data.warnings);
+        })
+        .catch(() => {});
 
-        socket.on('connect', () => {
-            const si = document.getElementById('statusIndicator');
-            if (si) { si.innerHTML = '<span class="pulse-dot"></span> Socket Connected'; si.style.color = 'var(--success-color)'; }
-        });
-
-        socket.on('disconnect', () => {
-            const si = document.getElementById('statusIndicator');
-            if (si) { si.innerHTML = '🔴 Disconnected'; si.style.color = 'var(--danger-color)'; }
-        });
-
-        // Full system update every 2s
-        socket.on('system_data', ({ stats, warnings }) => {
-            updateDashboard(stats, warnings);
-        });
-
-        // ——— process_update: fired immediately after a kill ———
-        // Re-renders the process table with the fresh list from backend
-        socket.on('process_update', (processes) => {
-            renderProcesses(processes);
-            // Update the process count KPI
-            const lu = document.getElementById('lastUpdated');
-            if (lu) lu.innerText = new Date().toLocaleTimeString();
-        });
+    // Check URL parameters for tab and chat
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab') || window.location.hash.replace('#', '');
+    if (tabParam && TAB_CONFIG[tabParam]) {
+        switchTab(tabParam);
     }
+    if (params.get('chat') === 'open') {
+        const body = document.getElementById('chatBody');
+        const chevron = document.getElementById('chatChevron');
+        if (body) body.style.display = 'flex';
+        if (chevron) chevron.style.transform = 'rotate(180deg)';
+        const msgs = document.getElementById('chatMessages');
+        if (msgs && msgs.children.length === 0) {
+            msgs.innerHTML = '<div class="msg bot">Hello! I am your AI Cloud System Monitor assistant. Ask me about CPU, memory, disk, or running processes!</div>';
+        }
+    }
+
+    // Socket.IO connection
+    let receivedSocketData = false;
+    if (typeof io !== 'undefined') {
+        try {
+            const socket = io(API, { transports: ['websocket', 'polling'], timeout: 3000 });
+
+            socket.on('connect', () => {
+                const si = document.getElementById('statusIndicator');
+                if (si) { si.innerHTML = '<span class="pulse-dot"></span> Socket Connected'; si.style.color = 'var(--success-color)'; }
+            });
+
+            socket.on('disconnect', () => {
+                const si = document.getElementById('statusIndicator');
+                if (si && !receivedSocketData) { si.innerHTML = '<span class="pulse-dot"></span> Live (HTTP)'; si.style.color = 'var(--success-color)'; }
+            });
+
+            // Full system update every 2s
+            socket.on('system_data', ({ stats, warnings }) => {
+                receivedSocketData = true;
+                updateDashboard(stats, warnings);
+            });
+
+            // ——— process_update: fired immediately after a kill ———
+            socket.on('process_update', (processes) => {
+                renderProcesses(processes);
+                const lu = document.getElementById('lastUpdated');
+                if (lu) lu.innerText = new Date().toLocaleTimeString();
+            });
+        } catch(e) {
+            console.log('Socket initialization skipped, relying on HTTP polling');
+        }
+    }
+
+    // Serverless HTTP Polling Fallback (for Vercel & environments without persistent WebSockets)
+    async function pollStats() {
+        if (!receivedSocketData) {
+            try {
+                const res = await fetch(`${API}/api/stats`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.stats) {
+                        updateDashboard(data.stats, data.warnings || []);
+                        const si = document.getElementById('statusIndicator');
+                        if (si) { si.innerHTML = '<span class="pulse-dot"></span> Live'; si.style.color = 'var(--success-color)'; }
+                    }
+                }
+            } catch (err) {
+                // Backend may still be spinning up
+            }
+        }
+    }
+    // Initial fetch and continuous interval
+    pollStats();
+    setInterval(pollStats, 2000);
 });

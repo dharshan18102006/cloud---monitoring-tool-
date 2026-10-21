@@ -1,0 +1,13 @@
+backend/venv
+.git
+screenshots
+screenshot_dashboard.png
+screenshot_login.png
+submission_factors
+submission_zips
+__pycache__
+*.pyc
+deploy.sh
+deploy.ps1
+docker-compose.yml
+Dockerfile

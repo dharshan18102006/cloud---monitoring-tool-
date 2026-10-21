@@ -4,7 +4,7 @@ import os
 # Add parent dir to path so "chatbot" package can be imported
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO
 from prometheus_client import Gauge, CollectorRegistry, REGISTRY
@@ -16,12 +16,17 @@ from system_monitor import SystemMonitor
 from chatbot.engine import ChatbotEngine
 
 # ---------------------------------------------------------------------------
-# App Factory
+# App Factory & Unified Frontend Serving
 # ---------------------------------------------------------------------------
-app = Flask(__name__)
+frontend_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend'))
+app = Flask(__name__, static_folder=frontend_dir, static_url_path='')
 app.config['SECRET_KEY'] = 'system-monitor-secret-2024'
 CORS(app, supports_credentials=True, origins="*")
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+
+@app.route('/')
+def serve_index():
+    return send_from_directory(frontend_dir, 'login.html')
 
 # ---------------------------------------------------------------------------
 # Prometheus: use try/except to avoid duplicate-registration on reload
@@ -42,13 +47,23 @@ procs_gauge  = _get_or_create_gauge('system_active_procs', 'Number of running pr
 # MongoDB (optional – app works without it)
 # ---------------------------------------------------------------------------
 warnings_collection = None
-try:
-    client = pymongo.MongoClient('mongodb://localhost:27017/', serverSelectionTimeoutMS=2000)
-    client.server_info()
-    warnings_collection = client['system_monitor_db']['warnings']
-    print("✅  MongoDB connected")
-except Exception as e:
-    print(f"⚠️  MongoDB unavailable: {e} – running without DB")
+mongo_uri = os.environ.get('MONGO_URI')
+if mongo_uri:
+    try:
+        client = pymongo.MongoClient(mongo_uri, serverSelectionTimeoutMS=1500)
+        client.server_info()
+        warnings_collection = client['system_monitor_db']['warnings']
+        print(f"[INFO] MongoDB connected to {mongo_uri}")
+    except Exception as e:
+        print(f"[WARN] MongoDB unavailable: {e} - running without DB")
+elif not os.environ.get('VERCEL'):
+    try:
+        client = pymongo.MongoClient('mongodb://localhost:27017/', serverSelectionTimeoutMS=500)
+        client.server_info()
+        warnings_collection = client['system_monitor_db']['warnings']
+        print("[INFO] MongoDB connected")
+    except Exception:
+        pass
 
 # ---------------------------------------------------------------------------
 # Globals shared with routes (imported lazily there to avoid circular refs)
@@ -86,6 +101,16 @@ def _background():
 
 threading.Thread(target=_background, daemon=True).start()
 
+@socketio.on('connect')
+def on_client_connect():
+    global current_stats
+    if current_stats:
+        try:
+            warnings = monitor.get_warnings(current_stats)
+            socketio.emit('system_data', {'stats': current_stats, 'warnings': warnings})
+        except Exception:
+            pass
+
 # ---------------------------------------------------------------------------
 # Register Blueprints
 # ---------------------------------------------------------------------------
@@ -104,4 +129,4 @@ app.register_blueprint(chat_bp,    url_prefix='/api')
 # ---------------------------------------------------------------------------
 if __name__ == '__main__':
     # use_reloader=False prevents the double-registration issue entirely
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
